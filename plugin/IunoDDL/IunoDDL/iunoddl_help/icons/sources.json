@@ -1,0 +1,137 @@
+{
+  "source": "呜哇小站表情图鉴里的尤诺表情包（企划/Solar5、画师/雾雪），https://emoji.wuwa.games/archives?character=%E5%B0%A4%E8%AF%BA，仅供个人、非商业使用",
+  "selection": "人工逐帧查看；完整原帧缩入圆角底托，保留透明度，不裁切人物；图标200px，内容180px",
+  "icons": [
+    {
+      "icon": "plugin.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "008-哼哼.gif",
+      "frame_index": 0,
+      "sha256": "2f8999b98aa17bd34d838b11587ad74cbb64acf3db84bed9be178ed913c258a1"
+    },
+    {
+      "icon": "forward.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "016-上工.gif",
+      "frame_index": 0,
+      "sha256": "ee9e539d0ffabd241ea5cb9be2d79eba6b44e414062b2ad69c12dd5cc4106e8d"
+    },
+    {
+      "icon": "create.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "016-上工.gif",
+      "frame_index": 17,
+      "sha256": "378cc6233a631b2ba41ae27f32659677f2ae7a678b872b3db53f116fa437edad"
+    },
+    {
+      "icon": "confirm.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "006-鼓掌.gif",
+      "frame_index": 16,
+      "sha256": "37eaf8bbadbf0970bbe007adc50f922c7a0c4fb3808b9e519ef0c6fa5a1c4403"
+    },
+    {
+      "icon": "edit_draft.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "001-戳戳.gif",
+      "frame_index": 0,
+      "sha256": "febfaf7e573e071adfe26a096d3041824e010869bce53551b2c92663976df599"
+    },
+    {
+      "icon": "remove_item.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "017-生气.gif",
+      "frame_index": 0,
+      "sha256": "ff02694bb9aa6f43c2f4c2b6c98f00eec81fea3adcc627602b6cad18e84a77a8"
+    },
+    {
+      "icon": "cancel.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "007-喝茶.gif",
+      "frame_index": 0,
+      "sha256": "700d02ee7b445e806f19990337b2f5b9e858409720603088b175fd8f795a9cf0"
+    },
+    {
+      "icon": "drafts.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "018-探头.gif",
+      "frame_index": 24,
+      "sha256": "bd1616d5c7cb7caf6784ff6fed13ff856a4dfb269e4735239b361d69f50274fd"
+    },
+    {
+      "icon": "detail.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "004-端详.gif",
+      "frame_index": 0,
+      "sha256": "756f084902b02a9f31da6b58346f8549a6375650b5383f986ceda080f3771250"
+    },
+    {
+      "icon": "edit_task.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "013-灵光.gif",
+      "frame_index": 8,
+      "sha256": "65f75efb0eb45f4e37536592aa6bbf4b794ff491e2f6197fa86b4dcc471d61b5"
+    },
+    {
+      "icon": "delete_task.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "017-生气.gif",
+      "frame_index": 16,
+      "sha256": "4e2efdf62c4aa12ec72b21eb341935cb3f8918c11c655f8a864d4cd7d6723efb"
+    },
+    {
+      "icon": "confirm_delete.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "005-对手指.gif",
+      "frame_index": 0,
+      "sha256": "980ed6c432f4d82866fe9212a3974d4aad2bb8d14bd9beee8296af4d49ed085a"
+    },
+    {
+      "icon": "undo.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "012-拉泪.gif",
+      "frame_index": 0,
+      "sha256": "cc6ea9473c01a7450bace7a51b49ac69686c44a1a8a117134f2e90c4ea5e702a"
+    },
+    {
+      "icon": "list.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "004-端详.gif",
+      "frame_index": 24,
+      "sha256": "ee5f7999f105aaad1107efd9bea1a302dfd550be1e1e9d636dc6786faa24540a"
+    },
+    {
+      "icon": "help.png",
+      "archive": "Solar5_尤诺-gif.zip",
+      "entry": "023-疑惑.gif",
+      "frame_index": 8,
+      "sha256": "d595a6bcfe25cc0865216ec18a82f0db2f455f39a1028a707cb7980af33e2f55"
+    },
+    {
+      "icon": "merge_draft.png",
+      "meme_id": "cb3cb27277a22b23",
+      "name": "零食棒两头凑近",
+      "frame_index": 14,
+      "sha256": "2e65aa796f693cfd926cd6585713f80a9f647b454202a3d5ebf1ed795193237d",
+      "archive": "雾雪尤诺表情包-gif.zip",
+      "entry": "017-2TT12_monkey_game.gif"
+    },
+    {
+      "icon": "merge_task.png",
+      "meme_id": "afcdc64845445963",
+      "name": "抱来一摞材料",
+      "frame_index": 30,
+      "sha256": "bbbaca3792a30c8673a4bd5ec7654157a0dcdae4511967d6c8b47fccca78e7ad",
+      "archive": "雾雪尤诺表情包-gif.zip",
+      "entry": "032-3TT01_还不能休息哦.gif"
+    }
+  ],
+  "banner": {
+    "file": "../banner.jpg",
+    "archive": "雾雪尤诺表情包-gif.zip",
+    "entry": "068-9N01_哈气.gif",
+    "frame_index": 0,
+    "composition": "1545x300；夜空渐变、星星和月亮都是程序画的，表情第 0 帧原样（不缩放、不裁切）放在月亮左下方，底边对齐",
+    "sha256": "6b14cf1ffb99ad1500a9a87dee40f85c2fcc62a6d92111aabb8377cb280ae973"
+  }
+}

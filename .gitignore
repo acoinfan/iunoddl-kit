@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+# 运行时生成的配置和状态，里面有令牌
+config.json
+task_meta.json
+undo.json
+audit.jsonl
+.env

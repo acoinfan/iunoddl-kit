@@ -1,0 +1,6 @@
+[project]
+name = "iunoddl"
+version = "0.2.0"
+description = "把 QQ 里转发的作业通知整理成 DDL，写进 Vikunja 看板"
+license = "GPL-3.0-or-later"
+dependencies = []

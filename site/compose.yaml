@@ -1,0 +1,30 @@
+# Vikunja：DDL 看板的数据后端。deploy-site.sh 会把本文件复制到安装目录，并在旁边生成 .env（权限 600）：
+#   VIKUNJA_PUBLIC_URL  Vikunja 管理后台的网址，例如 https://todo.example.com/
+#   VIKUNJA_SECRET      随机生成的签名密钥；生成后别改，改了所有人都要重新登录
+#   VIKUNJA_PORT        只监听本机的端口，nginx 和插件都从这里访问，默认 3456
+# 镜像里的程序以 uid 1000 运行，data/ 下的两个目录要归 1000 所有。
+services:
+  vikunja:
+    # 固定版本：插件和看板前端都按 2.6.0 的接口测过，升级前先在别处试一遍
+    image: vikunja/vikunja:2.6.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${VIKUNJA_PORT:-3456}:3456"
+    environment:
+      VIKUNJA_SERVICE_PUBLICURL: "${VIKUNJA_PUBLIC_URL:?.env 里缺 VIKUNJA_PUBLIC_URL}"
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: "false"
+      VIKUNJA_SERVICE_TIMEZONE: "Asia/Shanghai"
+      VIKUNJA_SERVICE_SECRET: "${VIKUNJA_SECRET:?.env 里缺 VIKUNJA_SECRET}"
+      VIKUNJA_SERVICE_INTERFACE: ":3456"
+      VIKUNJA_DATABASE_TYPE: "sqlite"
+      VIKUNJA_DATABASE_PATH: "/db/vikunja.db"
+      VIKUNJA_FILES_BASEPATH: "/app/vikunja/files"
+    volumes:
+      - ./data/db:/db
+      - ./data/files:/app/vikunja/files
+    healthcheck:
+      test: ["CMD", "/app/vikunja/vikunja", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
