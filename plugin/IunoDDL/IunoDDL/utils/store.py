@@ -38,7 +38,7 @@ class Config(TypedDict):
 
 DEFAULT_CONFIG: Config = {
     "bot_name": "尤诺",
-    "mode": "general",
+    "mode": "homework",
     "extra_prompt": "",
     "vikunja_api": "http://127.0.0.1:3456/api/v1",
     "vikunja_token": "",

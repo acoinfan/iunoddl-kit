@@ -1,5 +1,7 @@
 # iunoddl-kit
 
+> 这是 `homework` 分支：插件默认只记作业（`mode` 默认是 `homework`），其余和 `main` 完全一样。想记所有有截止时间的事，用 `main` 分支，或者把配置里的 `mode` 改成 `general`。
+
 尤诺的 DDL 小本本：GSCore 插件 IunoDDL + 公开只读的 DDL 看板（Vikunja）。
 
 群友在 QQ 里转发通知、发一句 `ddl 明天 报名决斗赛事`，或者 @机器人，插件把它整理成草稿，本人确认后写进 Vikunja；看板网页公开只读，展示还没完成的事和时间轴。机器人默认自称「尤诺」，可以改。
