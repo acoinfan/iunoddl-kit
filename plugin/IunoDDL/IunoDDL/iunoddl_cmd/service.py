@@ -7,7 +7,7 @@ import asyncio
 from typing import Optional
 from datetime import datetime
 
-from ..utils.core import TZ, Draft, DDLItem, short, fmt_due, board_line
+from ..utils.core import TZ, Draft, DDLItem, term, short, by_mode, fmt_due, board_line
 from ..utils.store import (
     Snapshot,
     TaskMeta,
@@ -63,16 +63,18 @@ def render_desc(meta: TaskMeta) -> str:
         # 插件接手之前就有的作业：原文一个字不动，QQ 补充的内容只附在后面
         parts = [meta["legacy"]]
         if meta["detail"]:
-            parts.append(f"<hr><p><strong>QQ 补充的要求</strong>：{e(meta['detail']).replace(chr(10), '<br>')}</p>")
+            parts.append(
+                f"<hr><p><strong>QQ 补充的{term('detail')}</strong>：{e(meta['detail']).replace(chr(10), '<br>')}</p>"
+            )
         return "".join(parts + _sources_html(meta["sources"]))
     parts = []
     if meta["course"]:
-        parts.append(f"<p><strong>课程</strong>：{e(meta['course'])}</p>")
-    parts.append(f"<p><strong>作业</strong>：{e(meta['name'])}</p>")
+        parts.append(f"<p><strong>{term('course')}</strong>：{e(meta['course'])}</p>")
+    parts.append(f"<p><strong>{term('item')}</strong>：{e(meta['name'])}</p>")
     if meta["platform"]:
-        parts.append(f"<p><strong>提交平台</strong>：{e(meta['platform'])}</p>")
+        parts.append(f"<p><strong>{by_mode('办理方式', '提交平台')}</strong>：{e(meta['platform'])}</p>")
     if meta["detail"]:
-        parts.append(f"<p><strong>要求</strong>：{e(meta['detail']).replace(chr(10), '<br>')}</p>")
+        parts.append(f"<p><strong>{term('detail')}</strong>：{e(meta['detail']).replace(chr(10), '<br>')}</p>")
     if meta["legacy"]:
         parts.append("<hr><p><strong>原有说明</strong></p>" + meta["legacy"])
     parts += _sources_html(meta["sources"])
@@ -181,9 +183,9 @@ def _change_summary(before: DDLItem, after: DDLItem) -> str:
     if before.due != after.due:
         out.append(f"截止 {fmt_due(before.due, now, False)} → {fmt_due(after.due, now, False)}")
     if before.platform != after.platform:
-        out.append(f"平台 {before.platform or '无'} → {after.platform or '无'}")
+        out.append(f"{term('platform')} {before.platform or '无'} → {after.platform or '无'}")
     if before.detail != after.detail:
-        out.append("要求有改动")
+        out.append(f"{term('detail')}有改动")
     return "；".join(out) or "无字段变化（补充了通知原文）"
 
 
@@ -391,7 +393,7 @@ def _list_entry(t: Json, due: Optional[datetime], now: datetime) -> list[str]:
         lines.append(f"　截止：{fmt_due(due, now)}")
     labels = label_titles(t)
     if labels:
-        lines.append(f"　平台：{'、'.join(labels)}")
+        lines.append(f"　{term('platform')}：{'、'.join(labels)}")
     return lines
 
 
@@ -399,16 +401,19 @@ def render_list(tasks: list[Json], board_url: str) -> str:
     now = datetime.now(TZ)
     open_tasks = [t for t in tasks if t["done"] is not True]
     if not open_tasks:
-        return "\n\n".join(["看板上现在一条作业都没有……难得清闲嘛。", *board_line(board_url)])
+        return "\n\n".join([f"看板上现在一条{term('item')}都没有……难得清闲嘛。", *board_line(board_url)])
     with_due = [(task_due(t), t) for t in open_tasks]
     dated = sorted([(d, t) for d, t in with_due if d is not None], key=lambda x: x[0])
     groups: list[tuple[str, list[tuple[Optional[datetime], Json]]]] = [
         ("⚠️ 已经过了截止", [(d, t) for d, t in dated if d < now]),
-        ("🔥 3 天内要交", [(d, t) for d, t in dated if now <= d and (d.date() - now.date()).days <= 3]),
-        ("📅 之后要交", [(d, t) for d, t in dated if (d.date() - now.date()).days > 3]),
+        (
+            by_mode("🔥 3 天内到期", "🔥 3 天内要交"),
+            [(d, t) for d, t in dated if now <= d and (d.date() - now.date()).days <= 3],
+        ),
+        (by_mode("📅 之后到期", "📅 之后要交"), [(d, t) for d, t in dated if (d.date() - now.date()).days > 3]),
         ("❔ 还没写截止时间", [(d, t) for d, t in with_due if d is None]),
     ]
-    lines = [f"没完成的作业一共 {len(open_tasks)} 条："]
+    lines = [f"没完成的{term('item')}一共 {len(open_tasks)} 条："]
     shown = 0
     for head, items in groups:
         if not items:
@@ -430,13 +435,27 @@ def render_list(tasks: list[Json], board_url: str) -> str:
 def render_detail(task: Json, meta: Optional[TaskMeta], board_url: str) -> str:
     now = datetime.now(TZ)
     it = task_to_item(task, meta)
-    # 「作业 #n」是引用这张卡片修改时用来认编号的标记，别改掉
-    lines = [f"📌 作业 #{jint(task, 'index')}：{jstr(task, 'title')}", "", f"截止：{fmt_due(it.due, now)}"]
+    # 「作业 #n」「事项 #n」是引用这张卡片修改时用来认编号的标记，别改掉
+    lines = [f"📌 {term('item')} #{jint(task, 'index')}：{jstr(task, 'title')}", "", f"截止：{fmt_due(it.due, now)}"]
     if it.platform:
-        lines.append(f"平台：{it.platform}")
-    detail = it.detail or plain(jstr(task, "description"))
+        lines.append(f"{term('platform')}：{it.platform}")
+    description = jstr(task, "description")
+    if it.detail:
+        detail = it.detail
+    elif meta is None:
+        # 插件没记过的条目（比如在网页上直接建的）：网页上的描述就是说明
+        detail = plain(description)
+    elif not meta["creator"]:
+        # 插件接手之前就有的老条目：显示它原来的描述
+        detail = plain(meta["legacy"])
+    elif description != render_desc(meta):
+        # 有人在网页上改过描述，别把改的东西藏起来
+        detail = plain(description)
+    else:
+        # 插件自己生成的描述里只有名称、原文和记录人，卡片上已经都有了，不再重复
+        detail = ""
     if detail:
-        lines.append(f"要求：{short(detail, 150)}")
+        lines.append(f"{term('detail')}：{short(detail, 150)}")
     if meta is not None and meta["creator"]:
         lines.append(f"记录人：{meta['creator']}")
     if task["done"] is True:
@@ -445,7 +464,7 @@ def render_detail(task: Json, meta: Optional[TaskMeta], board_url: str) -> str:
         "",
         "要改的话，引用这条消息回复：",
         "· ddl 截止周五晚上 → 改截止",
-        "· ddl 要交PDF和源码 → 改要求，字段名不写也行",
+        by_mode("· ddl 记得带邀请函 → 改说明，字段名不写也行", "· ddl 要交PDF和源码 → 改要求，字段名不写也行"),
         "· ddl删 → 删除这条",
         "改完会先给你看对比，确认了才写进看板。",
         *board_line(board_url),

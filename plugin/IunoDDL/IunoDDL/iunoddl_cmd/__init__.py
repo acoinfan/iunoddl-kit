@@ -27,7 +27,10 @@ from ..utils.core import (
     DRAFT_MAX_PER_USER,
     Draft,
     DDLItem,
+    mode,
+    term,
     short,
+    by_mode,
     bot_name,
     done_head,
     help_text,
@@ -62,17 +65,27 @@ _RE_NEW = re.compile(r"^(?:记|新建|添加|新增)\s*")
 # 草稿里第几条：「第1条截止周五」「1 截止周五」「1截止周五」
 _RE_ITEM_NTH = re.compile(r"^第\s*(\d+)\s*条\s*(.*)$", re.S)
 _RE_ITEM_SPACE = re.compile(r"^(\d+)\s+(.*)$", re.S)
-_RE_ITEM_FIELD = re.compile(r"^(\d+)(?=标题|课程|截止|平台|要求|新建)(.*)$", re.S)
+_RE_ITEM_FIELD = {
+    "homework": re.compile(r"^(\d+)(?=标题|课程|截止|平台|要求|新建)(.*)$", re.S),
+    "general": re.compile(r"^(\d+)(?=标题|课程|分类|事项名|截止|平台|方式|要求|说明|新建)(.*)$", re.S),
+}
 # 引用卡片时用来认编号的标记，和卡片文字对应
 _RE_CARD_DRAFT = re.compile(r"草稿\s*T(\d+)")
-_RE_CARD_TASK = re.compile(r"作业\s*#(\d+)")
+_RE_CARD_TASK = {"homework": re.compile(r"作业\s*#(\d+)"), "general": re.compile(r"(?:作业|事项)\s*#(\d+)")}
 _CARD_MARKS = ("DDL 小本本", "ddl确认", "ddl 确认")
 _WORDS_CONFIRM = ("确认", "确定", "好", "ok", "OK", "可以")
 _WORDS_CANCEL = ("取消", "算了", "放弃", "不要了")
 _GLOBAL = ("列表", "清单", "全部", "list", "看板", "草稿", "暂存", "我的草稿", "stash")
-_TASK_EDIT_HINT = (
-    "改看板上的作业换新写法啦：先发 ddl#{n} 调出作业卡片，再引用那张卡片回复 ddl 要改的内容（比如 ddl 截止周五晚上）。"
-)
+
+
+def _task_edit_hint(n: object) -> str:
+    item = term("item")
+    return (
+        f"改看板上的{item}换新写法啦：先发 ddl#{n} 调出{item}卡片，"
+        "再引用那张卡片回复 ddl 要改的内容（比如 ddl 截止周五晚上）。"
+    )
+
+
 _NODE_MARK = "[合并转发]"
 
 
@@ -217,7 +230,7 @@ async def _dispatch(bot: Bot, ev: Event, cfg: Config, text: str) -> None:
         if m:
             await _on_draft_card(bot, ev, cfg, f"T{m.group(1)}", text, now)
             return
-        m = _RE_CARD_TASK.search(quoted)
+        m = _RE_CARD_TASK[mode()].search(quoted)
         if m:
             await _on_task_card(bot, ev, cfg, int(m.group(1)), text, now)
             return
@@ -225,7 +238,7 @@ async def _dispatch(bot: Bot, ev: Event, cfg: Config, text: str) -> None:
         if any(mark in quoted for mark in marks):
             await bot.send(
                 "这张卡片不能直接改哦。\n"
-                "· 改作业：先发 ddl#编号 调出作业卡片，再引用它回复 ddl 要改的内容\n"
+                f"· 改{term('item')}：先发 ddl#编号 调出{term('item')}卡片，再引用它回复 ddl 要改的内容\n"
                 "· 处理草稿：引用草稿卡片回复 ddl确认 / ddl取消"
             )
             return
@@ -265,7 +278,7 @@ async def _dispatch(bot: Bot, ev: Event, cfg: Config, text: str) -> None:
         return
     m = _RE_TASK.match(text)
     if m and m.group(2).strip():
-        await bot.send(_TASK_EDIT_HINT.format(n=m.group(1)))
+        await bot.send(_task_edit_hint(m.group(1)))
         return
     kind, n = parse_ref(text)
     if kind == "formal":
@@ -322,9 +335,10 @@ async def prepare_new_draft(ev: Event, cfg: Config, source: str, hint: str, now:
     tasks = await api.list_tasks()
     items = await parse_notice(source, hint, known_courses(tasks, load_meta()), now)
     if items is None:
-        return f"唔，这段通知{bot_name()}没读明白……可以直接写成：ddl 数值分析 第三次作业 10/18 23:59 学习通"
+        example = by_mode("ddl 明天 报名决斗赛事", "ddl 数值分析 第三次作业 10/18 23:59 学习通")
+        return f"唔，这段通知{bot_name()}没读明白……可以直接写成：{example}"
     if not items:
-        return "这里面……没找到需要交的作业呀。是不是转发错了？"
+        return by_mode("这里面……没找到有截止时间要办的事呀。", "这里面……没找到需要交的作业呀。") + "是不是转发错了？"
     metas = load_meta()
     stamps: dict[int, str] = {}
     for it in items:
@@ -383,7 +397,7 @@ async def prepare_draft_edit(d: Draft, idx: int, rest: str, now: datetime) -> st
 
 def _split_item(rest: str) -> tuple[Optional[int], str]:
     """「第1条截止周五」「1 截止周五」「1截止周五」→ (1, "截止周五")；没写第几条 → (None, 原文)。"""
-    for pattern in (_RE_ITEM_NTH, _RE_ITEM_SPACE, _RE_ITEM_FIELD):
+    for pattern in (_RE_ITEM_NTH, _RE_ITEM_SPACE, _RE_ITEM_FIELD[mode()]):
         m = pattern.match(rest)
         if m:
             return int(m.group(1)), m.group(2).strip()
@@ -395,7 +409,7 @@ def _split_item(rest: str) -> tuple[Optional[int], str]:
 async def _edit(bot: Bot, ev: Event, cfg: Config, ref: str, rest: str, now: datetime) -> None:
     kind, n = parse_ref(ref)
     if kind == "formal":
-        await bot.send(_TASK_EDIT_HINT.format(n=n))
+        await bot.send(_task_edit_hint(n))
         return
     if kind != "temp":
         await bot.send("要改哪一份呀？草稿要引用草稿卡片回复，或者写编号，比如 ddl改T3 1截止周五")
@@ -453,7 +467,8 @@ async def prepare_task_edit(ev: Event, cfg: Config, n: int, rest: str, now: date
     )
     new = await _modify(d.items[0], rest, now)
     if new is None:
-        return f"这句话{bot_name()}没看懂……换个说法试试？比如引用作业卡片回复：ddl 截止周五晚上、ddl 要交PDF"
+        example = by_mode("ddl 说明 黑海岸会派人支援", "ddl 要交PDF")
+        return f"这句话{bot_name()}没看懂……换个说法试试？比如引用{term('item')}卡片回复：ddl 截止周五晚上、{example}"
     d.items[0] = new
     dropped = _add_draft(d)
     return _with_dropped(render_draft(d, now), dropped)
@@ -491,7 +506,8 @@ async def _on_draft_card(bot: Bot, ev: Event, cfg: Config, t: str, text: str, no
 async def _on_task_card(bot: Bot, ev: Event, cfg: Config, n: int, text: str, now: datetime) -> None:
     """引用了作业卡片：回复「删」就起删除草稿，其余当成修改内容。"""
     if not text:
-        await bot.send(f"引用了 #{n}，想改什么？比如引用卡片回复：ddl 截止周五晚上、ddl 要交PDF，或者 ddl删")
+        example = by_mode("ddl 说明 黑海岸会派人支援", "ddl 要交PDF")
+        await bot.send(f"引用了 #{n}，想改什么？比如引用卡片回复：ddl 截止周五晚上、{example}，或者 ddl删")
         return
     if text in ("删", "删除", "删掉"):
         await _delete(bot, ev, cfg, f"#{n}", "", now)
@@ -501,7 +517,7 @@ async def _on_task_card(bot: Bot, ev: Event, cfg: Config, n: int, text: str, now
         await _merge(bot, ev, cfg, f"#{n} {m.group(1).strip()}", now)
         return
     if text in _WORDS_CONFIRM or text in _WORDS_CANCEL:
-        await bot.send(f"这是作业 #{n} 的卡片哦。确认或取消要引用草稿卡片（标着「草稿 T编号」的那条）回复。")
+        await bot.send(f"这是{term('item')} #{n} 的卡片哦。确认或取消要引用草稿卡片（标着「草稿 T编号」的那条）回复。")
         return
     await _edit_task(bot, ev, cfg, n, text, now)
 
@@ -532,7 +548,7 @@ async def _delete(bot: Bot, ev: Event, cfg: Config, ref: str, item_no: str, now:
     if kind != "formal":
         await bot.send(
             "要删哪一条呀？\n· 草稿里的某一条：引用草稿卡片回复 ddl删2"
-            "\n· 看板上的作业：引用作业卡片回复 ddl删，或者 ddl删#12"
+            f"\n· 看板上的{term('item')}：引用{term('item')}卡片回复 ddl删，或者 ddl删#12"
         )
         return
     task = await _api(cfg).find_by_index(n)
@@ -558,11 +574,13 @@ async def _delete(bot: Bot, ev: Event, cfg: Config, ref: str, item_no: str, now:
 
 # ---------------------------------------------------------------- 合并
 
-_MERGE_USAGE = (
-    "要合并哪几条呀？\n"
-    "· 草稿里拆开的几条：引用草稿卡片回复 ddl合并（只合并其中几条：ddl合并1 2）\n"
-    "· 看板上已有的：ddl合并#24#25#26，后面可以跟新名字，比如 ddl合并#24#25 第四章作业"
-)
+
+def _merge_usage() -> str:
+    return (
+        "要合并哪几条呀？\n"
+        "· 草稿里拆开的几条：引用草稿卡片回复 ddl合并（只合并其中几条：ddl合并1 2）\n"
+        "· 看板上已有的：ddl合并#24#25#26，后面可以跟新名字，比如 ddl合并#24#25 " + by_mode("商会事务", "第四章作业")
+    )
 
 
 async def _merge(bot: Bot, ev: Event, cfg: Config, rest: str, now: datetime) -> None:
@@ -576,7 +594,7 @@ async def _merge(bot: Bot, ev: Event, cfg: Config, rest: str, now: datetime) -> 
         refs, name = [int(x) for x in re.findall(r"\d+", rest)], ""
     refs = list(dict.fromkeys(refs))
     if len(refs) < 2:
-        await bot.send(_MERGE_USAGE)
+        await bot.send(_merge_usage())
         return
     await bot.send(await prepare_task_merge(ev, cfg, refs, name, now))
 
@@ -587,7 +605,7 @@ async def _merge_draft(bot: Bot, ev: Event, t: str, rest: str, now: datetime) ->
     if d is None:
         return
     if d.kind != "new":
-        await bot.send(f"{d.label} 不是新建草稿，没什么可合并的。看板上已有的作业用 ddl合并#24#25")
+        await bot.send(f"{d.label} 不是新建草稿，没什么可合并的。看板上已有的{term('item')}用 ddl合并#24#25")
         return
     if len(d.items) < 2:
         await bot.send(f"{d.label} 里只有一条，不用合并哦。")
@@ -600,7 +618,8 @@ async def _merge_draft(bot: Bot, ev: Event, t: str, rest: str, now: datetime) ->
     chosen = [d.items[i - 1] for i in picks]
     if any(it.target_id is not None for it in chosen):
         await bot.send(
-            "这几条里有要更新看板上已有作业的，不能直接合并。先引用草稿回复 ddl第N条新建，或者确认后再用 ddl合并#编号"
+            f"这几条里有要更新看板上已有{term('item')}的，不能直接合并。"
+            "先引用草稿回复 ddl第N条新建，或者确认后再用 ddl合并#编号"
         )
         return
     merged = merge_items(chosen)
@@ -665,7 +684,7 @@ async def _stale_tasks(api: Vikunja, d: Draft) -> list[str]:
             task = await api.get_task(task_id)
         except VikunjaError as e:
             if e.status == 404:
-                out.append(f"有一条作业已经被删掉了（任务 {task_id}）")
+                out.append(f"有一条{term('item')}已经被删掉了（任务 {task_id}）")
                 continue
             raise
         if _stamp(task) != stamp:
@@ -697,7 +716,7 @@ async def _confirm(bot: Bot, ev: Event, cfg: Config, token: str, delete: bool) -
         await bot.send(
             "\n".join(
                 [
-                    f"{d.label} 先不写了：起草之后，看板上这些作业又被人改过：",
+                    f"{d.label} 先不写了：起草之后，看板上这些{term('item')}又被人改过：",
                     *[f"· {x}" for x in stale],
                     "",
                     "为了不把旧内容传上去，这份草稿已经作废。看一眼最新的（ddl 列表）再重新起草吧。",

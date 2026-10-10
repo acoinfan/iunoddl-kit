@@ -9,7 +9,7 @@ from gsuid_core.help.model import PluginSV, PluginHelp
 from gsuid_core.help.utils import register_help
 from gsuid_core.help.draw_new_plugin_help import get_new_help
 
-from ..utils.core import bot_name
+from ..utils.core import term, by_mode, bot_name
 from ..utils.store import MAIN_PATH
 
 ICON_DIR = Path(__file__).parent / "icons"
@@ -42,12 +42,13 @@ def _item(name: str, eg: str, icon_name: str, highlight: int = 6) -> DDLHelpItem
 
 def _help_data(board_url: str) -> dict[str, PluginHelp]:
     host = urlparse(board_url).netloc
+    item = term("item")
     return {
-        "记作业": {
-            "desc": "把作业通知变成看板上的 DDL",
+        by_mode("记 DDL", "记作业"): {
+            "desc": by_mode("把通知或一句话变成看板上的 DDL", "把作业通知变成看板上的 DDL"),
             "data": [
                 _item("转发记DDL", "引用转发后发 ddl", "forward"),
-                _item("打字记DDL", "ddl 课程 作业 10/18", "create"),
+                _item("打字记DDL", by_mode("ddl 明天 报名决斗赛事", "ddl 课程 作业 10/18"), "create"),
             ],
         },
         "处理草稿": {
@@ -62,20 +63,20 @@ def _help_data(board_url: str) -> dict[str, PluginHelp]:
             ],
         },
         "改看板上的": {
-            "desc": "先 ddl#编号 调出作业卡片，再引用卡片回复；都会先给你看对比",
+            "desc": f"先 ddl#编号 调出{item}卡片，再引用卡片回复；都会先给你看对比",
             "data": [
-                _item("调出作业", "ddl#12", "detail"),
-                _item("修改作业", "引用卡片回 ddl 要改的", "edit_task"),
-                _item("合并作业", "ddl合并#24#25", "merge_task"),
-                _item("删除作业", "引用卡片回 ddl删", "delete_task"),
+                _item(f"调出{item}", "ddl#12", "detail"),
+                _item(f"修改{item}", "引用卡片回 ddl 要改的", "edit_task"),
+                _item(f"合并{item}", "ddl合并#24#25", "merge_task"),
+                _item(f"删除{item}", "引用卡片回 ddl删", "delete_task"),
                 _item("确认删除", "引用草稿回 ddl确认删除", "confirm_delete", highlight=0),
                 _item("撤销", "ddl撤销", "undo"),
             ],
         },
         "查看": {
-            "desc": f"看板 {host}" if host else "在 QQ 里看作业",
+            "desc": f"看板 {host}" if host else f"在 QQ 里看{item}",
             "data": [
-                _item("作业列表", "ddl列表", "list"),
+                _item(f"{item}列表", "ddl列表", "list"),
                 _item("文字版帮助", "ddl文字帮助", "help"),
             ],
         },

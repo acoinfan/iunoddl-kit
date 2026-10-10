@@ -3,12 +3,13 @@
 import re
 import random
 import calendar
-from typing import Literal, Optional
+from typing import Literal, TypeVar, Optional
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from dataclasses import field, dataclass
 
 TZ = ZoneInfo("Asia/Shanghai")
+T = TypeVar("T")
 WEEKDAYS = "一二三四五六日"
 DRAFT_TTL = 1800
 DRAFT_MAX_PER_USER = 5
@@ -32,6 +33,43 @@ def board_line(board_url: str) -> list[str]:
     return [f"看板：{board_url}"] if board_url else []
 
 
+# 两种模式：general 记所有有截止时间的事（报名赛事、出征集合、商会账目、作业……），homework 只记作业，措辞也按作业来。
+# 对应配置项 mode 和 extra_prompt；store.load_config 每次读配置时同步过来
+MODES = ("general", "homework")
+_mode = "general"
+_extra_prompt = ""
+
+
+def set_mode(mode: str, extra: str = "") -> None:
+    global _mode, _extra_prompt
+    _mode = mode if mode in MODES else "general"
+    _extra_prompt = extra.strip()
+
+
+def mode() -> str:
+    return _mode
+
+
+def extra_prompt() -> str:
+    return _extra_prompt
+
+
+def by_mode(general: T, homework: T) -> T:
+    """按当前模式二选一。"""
+    return homework if _mode == "homework" else general
+
+
+# 两种模式下的叫法：一条记录、所属分类、名字、提交或办理的方式、要求
+_TERMS = {
+    "general": {"item": "事项", "course": "分类", "name": "事项名", "platform": "方式", "detail": "说明"},
+    "homework": {"item": "作业", "course": "课程", "name": "作业名", "platform": "平台", "detail": "要求"},
+}
+
+
+def term(key: str) -> str:
+    return _TERMS[_mode][key]
+
+
 @dataclass
 class DDLItem:
     course: str
@@ -50,7 +88,7 @@ class DDLItem:
     def title(self) -> str:
         if self.course and self.name:
             return f"{self.course} · {self.name}"
-        return self.name or self.course or "（没有名字的作业）"
+        return self.name or self.course or f"（没有名字的{term('item')}）"
 
 
 @dataclass
@@ -256,15 +294,28 @@ _FIELD_ALIASES = {
     "详情": "要求",
     "说明": "要求",
 }
-_RE_FIELD = re.compile(
-    r"(?:^|\s)(" + "|".join(sorted(map(re.escape, _FIELD_ALIASES), key=len, reverse=True)) + r")\s*[:：=]?\s*"
-)
+# 通用模式额外认的说法
+_GENERAL_ALIASES = {
+    "事项名": "作业名",
+    "事项名称": "作业名",
+    "事项": "作业名",
+    "分类": "课程",
+    "类别": "课程",
+    "方式": "平台",
+    "办理方式": "平台",
+    "地点": "平台",
+}
+_ALIASES = {"homework": _FIELD_ALIASES, "general": {**_FIELD_ALIASES, **_GENERAL_ALIASES}}
+_RE_FIELD = {
+    key: re.compile(r"(?:^|\s)(" + "|".join(sorted(map(re.escape, words), key=len, reverse=True)) + r")\s*[:：=]?\s*")
+    for key, words in _ALIASES.items()
+}
 
 
 def parse_field_edits(text: str) -> Optional[dict[str, str]]:
     """「截止 10/18 23:59 平台 学习通」→ {"截止": "...", "平台": "..."}；不是这种格式返回 None。"""
     s = text.strip()
-    matches = list(_RE_FIELD.finditer(s))
+    matches = list(_RE_FIELD[_mode].finditer(s))
     if not matches or matches[0].start() != 0:
         return None
     out: dict[str, str] = {}
@@ -273,7 +324,7 @@ def parse_field_edits(text: str) -> Optional[dict[str, str]]:
         value = s[m.end() : end].strip()
         if not value:
             return None
-        out[_FIELD_ALIASES[m.group(1)]] = value
+        out[_ALIASES[_mode][m.group(1)]] = value
     return out
 
 
@@ -331,9 +382,9 @@ def short(text: str, limit: int = 80) -> str:
 def item_lines(i: int, it: DDLItem, now: datetime, label: str) -> list[str]:
     lines = ["", f"{i}. {it.title}", f"   截止：{fmt_due(it.due, now)}"]
     if it.platform:
-        lines.append(f"   平台：{it.platform}")
+        lines.append(f"   {term('platform')}：{it.platform}")
     if it.detail:
-        lines.append(f"   要求：{short(it.detail)}")
+        lines.append(f"   {term('detail')}：{short(it.detail)}")
     if it.due is None:
         lines.append(f"   ⚠ 没找到截止时间，引用这条回复：ddl 第{i}条截止10/18 23:59")
     if it.target_id is not None:
@@ -356,13 +407,13 @@ _EDIT_HEAD = (
 )
 _DONE_HEAD = (
     "记好了，这下可忘不掉了吧～",
-    "写进看板了。到时候没交，可别说{name}没提醒。",
+    "写进看板了。到时候{late}，可别说{name}没提醒。",
     "好啦，都记上了。……顺手而已，不用谢。",
 )
 
 
 def pick(options: tuple[str, ...]) -> str:
-    return random.choice(options).format(name=_bot_name)
+    return random.choice(options).format(name=_bot_name, late=by_mode("忘了", "没交"))
 
 
 def render_new_draft(d: Draft, now: datetime, edited: bool = False) -> str:
@@ -395,9 +446,9 @@ def diff_lines(before: DDLItem, after: DDLItem, now: datetime) -> list[str]:
     if before.due != after.due:
         out.append(f"截止：{fmt_due(before.due, now, False)} → {fmt_due(after.due, now)}")
     if before.platform != after.platform:
-        out.append(f"平台：{before.platform or '无'} → {after.platform or '无'}")
+        out.append(f"{term('platform')}：{before.platform or '无'} → {after.platform or '无'}")
     if before.detail != after.detail:
-        out.append(f"要求：{short(before.detail, 40) or '无'} → {short(after.detail, 60) or '无'}")
+        out.append(f"{term('detail')}：{short(before.detail, 40) or '无'} → {short(after.detail, 60) or '无'}")
     return out
 
 
@@ -412,7 +463,7 @@ def render_edit_draft(d: Draft, now: datetime) -> str:
         "",
         "引用这条消息回复：",
         "· ddl确认 → 写进看板",
-        "· ddl 平台学习通 → 接着改",
+        by_mode("· ddl 说明 黑海岸会派人支援 → 接着改", "· ddl 平台学习通 → 接着改"),
         "· ddl取消 → 不改了",
         f"（不引用的话要写编号，比如 ddl确认{t}）",
     ]
@@ -446,16 +497,16 @@ def render_merge_draft(d: Draft, now: datetime) -> str:
     lines += [f"· #{idx} {short(title, 34)}" for _, idx, title in d.merged]
     lines += ["", "合并以后：", f"   {it.title}", f"   截止：{fmt_due(it.due, now)}"]
     if it.platform:
-        lines.append(f"   平台：{it.platform}")
+        lines.append(f"   {term('platform')}：{it.platform}")
     if it.detail:
-        lines.append(f"   要求：{short(it.detail, 160)}")
+        lines.append(f"   {term('detail')}：{short(it.detail, 160)}")
     lines += [
         "",
         f"确认后 {others} 会删掉，内容和原始通知都并进 #{d.task_index}；弄错了可以 ddl撤销。",
         "",
         "引用这条消息回复：",
         "· ddl确认 → 写进看板",
-        "· ddl 作业名 第四章作业 → 改合并后的名字",
+        by_mode("· ddl 事项名 商会事务 → 改合并后的名字", "· ddl 作业名 第四章作业 → 改合并后的名字"),
         "· ddl取消 → 不合并了",
         f"（不引用的话要写编号，比如 ddl确认{t}）",
     ]
@@ -472,7 +523,7 @@ def render_draft(d: Draft, now: datetime, edited: bool = False) -> str:
     return render_delete_draft(d, now)
 
 
-_HELP = """📒 {name}的 DDL 小本本
+_HELP_HOMEWORK = """📒 {name}的 DDL 小本本
 
 小窍门：在手机上长按机器人发的卡片 →「回复」，就不用手打编号了。
 
@@ -523,8 +574,60 @@ ddl#12
 　→ 看一条的详情"""
 
 
+_HELP_GENERAL = """📒 {name}的 DDL 小本本
+
+小窍门：在手机上长按机器人发的卡片 →「回复」，就不用手打编号了。
+
+【记 DDL】
+ddl
+　→ 先引用一条转发或通知，再发这个
+ddl 明天 报名决斗赛事
+　→ 不引用，直接打字也行；写得越清楚越好，比如 ddl 9/12 18:00 三王峰集合决战利维亚坦
+
+【处理草稿】（引用草稿卡片回复，30 分钟内有效）
+ddl确认
+　→ 写进看板
+ddl 截止周五晚上
+　→ 修改；草稿里有好几条时写成 ddl 第1条截止周五
+ddl 标题 决战利维亚坦
+　→ 替换完整标题，不保留原来的分类前缀
+ddl 事项名 提交新品样单
+　→ 只改事项名，保留分类；只改分类可用 ddl 分类 莫塔里商会
+ddl删2
+　→ 去掉第 2 条
+ddl取消
+　→ 这份不要了
+ddl草稿
+　→ 看看自己手上还有哪些草稿
+不引用卡片时要写编号：ddl确认T3、ddl取消T3、ddl改T3 1截止周五
+
+【改看板上的】
+ddl#12
+　→ 先调出事项卡片
+引用事项卡片回复 ddl 要改的内容
+　→ 比如 ddl 截止周五、ddl 说明 黑海岸会派人支援，生成修改草稿，再引用草稿 ddl确认
+引用事项卡片回复 ddl删
+　→ 生成删除草稿，再引用它回复 ddl确认删除
+ddl撤销
+　→ 撤回自己上一次操作（24 小时内）
+
+【拆错了，合成一条】
+引用草稿卡片回复 ddl合并
+　→ 草稿里的几条合成一条；只合并其中几条写 ddl合并1 2
+ddl合并#24#25#26
+　→ 看板上已有的几条合成一条（并进第一条，其余删掉）；后面可以跟新名字，比如 ddl合并#24#25 商会事务
+　→ 都会先出草稿给你看，ddl确认 才写入，写错了能 ddl撤销
+
+【查看】
+ddl列表
+　→ 所有没完成的事项
+ddl#12
+　→ 看一条的详情"""
+
+
 def help_text(board_url: str) -> str:
-    return "\n\n".join([_HELP.format(name=_bot_name), *board_line(board_url)])
+    text = _HELP_HOMEWORK if _mode == "homework" else _HELP_GENERAL
+    return "\n\n".join([text.format(name=_bot_name), *board_line(board_url)])
 
 
 def done_head() -> str:

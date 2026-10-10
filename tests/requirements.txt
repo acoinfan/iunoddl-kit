@@ -1,0 +1,4 @@
+# 跑测试用：插件在 GSCore 环境里本来就有这些
+httpx
+pydantic
+pillow

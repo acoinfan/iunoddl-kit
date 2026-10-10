@@ -8,7 +8,7 @@ from pathlib import Path
 
 from gsuid_core.data_store import get_res_path
 
-from .core import set_bot_name
+from .core import MODES, set_mode, set_bot_name
 
 MAIN_PATH = get_res_path() / "IunoDDL"
 CONFIG_PATH = MAIN_PATH / "config.json"
@@ -24,6 +24,8 @@ MAIN_PATH.chmod(0o700)
 
 class Config(TypedDict):
     bot_name: str
+    mode: str
+    extra_prompt: str
     vikunja_api: str
     vikunja_token: str
     project_id: int
@@ -36,6 +38,8 @@ class Config(TypedDict):
 
 DEFAULT_CONFIG: Config = {
     "bot_name": "尤诺",
+    "mode": "general",
+    "extra_prompt": "",
     "vikunja_api": "http://127.0.0.1:3456/api/v1",
     "vikunja_token": "",
     "project_id": 0,
@@ -49,6 +53,8 @@ DEFAULT_CONFIG: Config = {
 # 第一次生成 config.json 时一起写进去的说明，插件不读这一项
 CONFIG_HELP = {
     "bot_name": "机器人在回复和帮助里的自称，默认「尤诺」；改了以后重启 GSCore，帮助图才会重画",
+    "mode": "记什么：general 记所有有截止时间的事（报名赛事、出征集合、作业……）；homework 只记作业，措辞也按作业来",
+    "extra_prompt": "补充给模型的说明，写这个群自己的说法和规矩，例如「老地方指埃弗拉德金库」；留空就不加",
     "vikunja_api": "Vikunja 的 API 地址，以 /api/v1 结尾；和 GSCore 在同一台机器上就用 127.0.0.1",
     "vikunja_token": "Vikunja 的 API 令牌，要有任务、标签、评论的读写权限；deploy-site.sh 会自动生成",
     "project_id": "看板项目的编号，也就是项目网址 /projects/<编号> 里的数字",
@@ -113,12 +119,15 @@ def load_config() -> Config:
     raw.pop("_说明", None)
     cfg: Config = {**DEFAULT_CONFIG, **raw}
     cfg["bot_name"] = str(cfg["bot_name"]).strip() or DEFAULT_CONFIG["bot_name"]
+    cfg["mode"] = cfg["mode"] if cfg["mode"] in MODES else DEFAULT_CONFIG["mode"]
+    cfg["extra_prompt"] = str(cfg["extra_prompt"] or "").strip()
     cfg["project_id"] = int(cfg["project_id"])
     cfg["view_id"] = int(cfg["view_id"])
     cfg["allowed_groups"] = [str(x) for x in cfg["allowed_groups"]]
     cfg["admins"] = [str(x) for x in cfg["admins"]]
     cfg["private_users"] = [str(x) for x in cfg["private_users"]]
     set_bot_name(cfg["bot_name"])
+    set_mode(cfg["mode"], cfg["extra_prompt"])
     return cfg
 
 

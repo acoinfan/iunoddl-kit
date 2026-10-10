@@ -1,0 +1,72 @@
+{
+  "source": "呜哇小站表情图鉴（https://emoji.wuwa.games），各包页面标注 CC BY-NC-SA 4.0，仅供个人、非商业使用",
+  "processing": "一般取第 0 帧（今汐那张第 0 帧还在渐显，取最不透明的一帧），按人物范围裁成正方形（卡提希娅是全身像，只取上半身），缩到 256×256，白底",
+  "avatars": {
+    "菲比": {
+      "pack": "菲比 · 微信精选 · 静态表情包",
+      "url": "https://emoji.wuwa.games/archives/phoebe-wechat-native-20261010-static",
+      "entry": "0163_269.png",
+      "frame": 0
+    },
+    "卡提希娅": {
+      "pack": "卡提希娅 · 常态（书牌）",
+      "url": "https://emoji.wuwa.games/archives/cartethyia-fxds-normal-merged-20261005",
+      "entry": "0185_17496-FXDS.png",
+      "frame": 0
+    },
+    "守岸人": {
+      "pack": "守岸人 · 原皮表情包",
+      "url": "https://emoji.wuwa.games/archives/shorekeeper-original-20261010",
+      "entry": "0116_点头.gif",
+      "frame": 0
+    },
+    "达妮娅": {
+      "pack": "达妮娅捏捏表情包",
+      "url": "https://emoji.wuwa.games/archives/daniya-emotelab-eyes-large-merged-20261005",
+      "entry": "0051_达妮娅_反转_2026-09-26-20-32-14.gif",
+      "frame": 0
+    },
+    "小爱": {
+      "pack": "爱弥斯鸣潮二周年动态表情包（懒A）",
+      "url": "https://emoji.wuwa.games/archives/aimisi-super-q",
+      "entry": "002-3星星眼.gif",
+      "frame": 0
+    },
+    "珂莱塔": {
+      "pack": "珂莱塔动态表情包（雾雪哈基米款）",
+      "url": "https://emoji.wuwa.games/archives/carlotta-wuyu",
+      "entry": "003-003-6N01_画爱心.gif",
+      "frame": 0
+    },
+    "奥古斯塔": {
+      "pack": "奥古斯塔动态表情包（雾雪猫猫款）",
+      "url": "https://emoji.wuwa.games/archives/augusta-feichen",
+      "entry": "005-10N06_鼓捣猫呢.gif",
+      "frame": 0
+    },
+    "露帕": {
+      "pack": "露帕动态表情包（雾雪）",
+      "url": "https://emoji.wuwa.games/archives/lupa-rainy-season-07",
+      "entry": "004-5N04_嘲笑.gif",
+      "frame": 0
+    },
+    "西格莉卡": {
+      "pack": "西格莉卡 猫猫 静态表情包（书牌）",
+      "url": "https://emoji.wuwa.games/archives/backlog-20260927-g048",
+      "entry": "011-08143-FXDS（）.png",
+      "frame": 0
+    },
+    "琳奈": {
+      "pack": "琳奈动态表情包（雾雪）",
+      "url": "https://emoji.wuwa.games/archives/linnai-wuxue-complete-merged-20261005",
+      "entry": "0057_6N09_吃团子.gif",
+      "frame": 0
+    },
+    "今汐": {
+      "pack": "今汐表情包（jinhsi-xi）",
+      "url": "https://emoji.wuwa.games/archives/jinhsi-xi-merged-20261005",
+      "entry": "013-1111_打招呼 1_2026-06-29-22-57-03.gif",
+      "frame": 7
+    }
+  }
+}
